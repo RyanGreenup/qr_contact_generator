@@ -24,6 +24,8 @@ fn main() -> eframe::Result {
 struct MyApp {
     name: String,
     age: u32,
+    selected_item: Option<usize>,
+    item_open: [bool; 10],
 }
 
 impl Default for MyApp {
@@ -31,6 +33,8 @@ impl Default for MyApp {
         Self {
             name: "Arthur".to_owned(),
             age: 42,
+            selected_item: None,
+            item_open: [false; 10],
         }
     }
 }
@@ -50,12 +54,30 @@ impl eframe::App for MyApp {
             }
             ui.label(format!("Hello '{}', age {}", self.name, self.age));
 
+            // Handle keyboard input
+            if let Some(selected_item) = self.selected_item {
+                if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+                    self.selected_item = Some((selected_item + 1).min(9));
+                }
+                if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+                    self.selected_item = Some(selected_item.saturating_sub(1));
+                }
+                if ctx.input(|i| i.key_pressed(egui::Key::Space)) {
+                    self.item_open[selected_item] = !self.item_open[selected_item];
+                }
+            }
+
             for i in 0..10 {
+                let open = self.item_open[i];
                 ui.collapsing(format!("List Item {}", i + 1), |ui| {
+                    if Some(i) == self.selected_item {
+                        ui.visuals_mut().selection.bg_fill = egui::Color32::from_gray(196);
+                    }
                     ui.label(format!("Sub-item {}-1", i + 1));
                     ui.label(format!("Sub-item {}-2", i + 1));
                     ui.label(format!("Sub-item {}-3", i + 1));
                 });
+                self.item_open[i] = open;
             }
 
             // ui.image(egui::include_image!(
