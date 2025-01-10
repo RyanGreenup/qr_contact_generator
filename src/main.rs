@@ -50,6 +50,14 @@ impl eframe::App for MyApp {
             }
             ui.label(format!("Hello '{}', age {}", self.name, self.age));
 
+            for i in 0..10 {
+                ui.collapsing(format!("List Item {}", i + 1), |ui| {
+                    ui.label(format!("Sub-item {}-1", i + 1));
+                    ui.label(format!("Sub-item {}-2", i + 1));
+                    ui.label(format!("Sub-item {}-3", i + 1));
+                });
+            }
+
             // ui.image(egui::include_image!(
             //     "../../../crates/egui/assets/ferris.png"
             // ));
