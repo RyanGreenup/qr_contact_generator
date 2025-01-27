@@ -21,10 +21,12 @@ fn main() -> eframe::Result {
     )
 }
 
+// Improve this so it can take a list of items AI!
 struct SelectableList {
     selected_item: Option<usize>,
     item_open: [bool; 10],
 }
+
 
 impl SelectableList {
     fn new() -> Self {
