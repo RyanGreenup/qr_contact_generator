@@ -45,9 +45,10 @@ The widget handles three keyboard actions:
 - Space toggles item expansion
     - Tab is the default to move between widgets, just like PySide6.
 
-/// tip | Saturating Subtraction
-# Explain the `.saturating_sub()` method AI!
-///
+The `saturating_sub()` method performs subtraction that saturates at zero instead of underflowing. This means:
+- If subtracting would result in a negative number, it returns 0 instead
+- For example: `1.saturating_sub(2)` returns 0, not -1
+- This is perfect for list navigation where we can't go below the first item
 
 Here's the keyboard handling code:
 
