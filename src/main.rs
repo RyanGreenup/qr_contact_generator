@@ -54,6 +54,7 @@ impl eframe::App for MyApp {
             }
             ui.label(format!("Hello '{}', age {}", self.name, self.age));
 
+            // Refactor this list into a separate widget AI!
             // Handle keyboard input
             if let Some(selected_item) = self.selected_item {
                 if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
