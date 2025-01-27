@@ -39,7 +39,7 @@ impl<T: std::fmt::Display> SelectableList<T> {
 
     fn show(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
         let items_len = self.items.len();
-        
+
         // Handle keyboard input
         if let Some(selected_item) = self.selected_item {
             if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
@@ -79,13 +79,13 @@ impl Default for MyApp {
         Self {
             name: "Arthur".to_owned(),
             age: 42,
-            list: SelectableList::new(vec![
+            list: SelectableList::new([
                 "Item 1".to_string(),
                 "Item 2".to_string(),
                 "Item 3".to_string(),
                 "Item 4".to_string(),
                 "Item 5".to_string(),
-            ]),
+            ].to_vec()),
         }
     }
 }
