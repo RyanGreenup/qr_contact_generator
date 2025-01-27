@@ -21,26 +21,29 @@ fn main() -> eframe::Result {
     )
 }
 
-// Improve this so it can take a list of items AI!
-struct SelectableList {
+struct SelectableList<T> {
+    items: Vec<T>,
     selected_item: Option<usize>,
-    item_open: [bool; 10],
+    item_open: Vec<bool>,
 }
 
-
-impl SelectableList {
-    fn new() -> Self {
+impl<T: std::fmt::Display> SelectableList<T> {
+    fn new(items: Vec<T>) -> Self {
+        let len = items.len();
         Self {
+            items,
             selected_item: None,
-            item_open: [false; 10],
+            item_open: vec![false; len],
         }
     }
 
     fn show(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        let items_len = self.items.len();
+        
         // Handle keyboard input
         if let Some(selected_item) = self.selected_item {
             if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
-                self.selected_item = Some((selected_item + 1).min(9));
+                self.selected_item = Some((selected_item + 1).min(items_len - 1));
             }
             if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
                 self.selected_item = Some(selected_item.saturating_sub(1));
@@ -50,9 +53,9 @@ impl SelectableList {
             }
         }
 
-        for i in 0..10 {
+        for i in 0..items_len {
             let open = self.item_open[i];
-            ui.collapsing(format!("List Item {}", i + 1), |ui| {
+            ui.collapsing(format!("{}", self.items[i]), |ui| {
                 if Some(i) == self.selected_item {
                     ui.visuals_mut().selection.bg_fill = egui::Color32::from_gray(196);
                 }
@@ -68,7 +71,7 @@ impl SelectableList {
 struct MyApp {
     name: String,
     age: u32,
-    list: SelectableList,
+    list: SelectableList<String>,
 }
 
 impl Default for MyApp {
@@ -76,7 +79,13 @@ impl Default for MyApp {
         Self {
             name: "Arthur".to_owned(),
             age: 42,
-            list: SelectableList::new(),
+            list: SelectableList::new(vec![
+                "Item 1".to_string(),
+                "Item 2".to_string(),
+                "Item 3".to_string(),
+                "Item 4".to_string(),
+                "Item 5".to_string(),
+            ]),
         }
     }
 }
