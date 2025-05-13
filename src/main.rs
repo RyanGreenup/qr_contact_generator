@@ -173,7 +173,12 @@ impl eframe::App for BusinessCardApp {
                     // vCard text
                     columns[0].vertical(|ui| {
                         ui.add_space(5.0);
-                        ui.label("vCard Content:");
+                        ui.horizontal(|ui| {
+                            ui.label("vCard Content:");
+                            if ui.button("Copy to Clipboard").clicked() && !self.vcard_text.is_empty() {
+                                ui.output_mut(|o| o.copied_text = self.vcard_text.clone());
+                            }
+                        });
                         ui.add(egui::TextEdit::multiline(&mut self.vcard_text)
                             .desired_width(f32::INFINITY)
                             .desired_rows(10)
