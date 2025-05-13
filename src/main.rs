@@ -68,109 +68,140 @@ impl BusinessContact {
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
         ..Default::default()
     };
     eframe::run_native(
-        "My egui App",
+        "Business Card QR Generator",
         options,
         Box::new(|cc| {
             // This gives us image support:
             egui_extras::install_image_loaders(&cc.egui_ctx);
 
-            Ok(Box::<MyApp>::default())
+            Ok(Box::<BusinessCardApp>::default())
         }),
     )
 }
 
-struct SelectableList<T> {
-    items: Vec<T>,
-    selected_item: Option<usize>,
-    item_open: Vec<bool>,
+
+struct BusinessCardApp {
+    contact: BusinessContact,
+    vcard_text: String,
 }
 
-impl<T: std::fmt::Display> SelectableList<T> {
-    fn new(items: Vec<T>) -> Self {
-        let len = items.len();
-        Self {
-            items,
-            selected_item: None,
-            item_open: vec![false; len],
-        }
-    }
-
-    fn show(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
-        let items_len = self.items.len();
-
-        // Handle keyboard input
-        if let Some(selected_item) = self.selected_item {
-            if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
-                self.selected_item = Some((selected_item + 1).min(items_len - 1));
-            }
-            if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
-                self.selected_item = Some(selected_item.saturating_sub(1));
-            }
-            if ctx.input(|i| i.key_pressed(egui::Key::Space)) {
-                self.item_open[selected_item] = !self.item_open[selected_item];
-            }
-        }
-
-        for i in 0..items_len {
-            let open = self.item_open[i];
-            ui.collapsing(format!("{}", self.items[i]), |ui| {
-                if Some(i) == self.selected_item {
-                    ui.visuals_mut().selection.bg_fill = egui::Color32::from_gray(196);
-                }
-                ui.label(format!("Sub-item {}-1", i + 1));
-                ui.label(format!("Sub-item {}-2", i + 1));
-                ui.label(format!("Sub-item {}-3", i + 1));
-            });
-            self.item_open[i] = open;
-        }
-    }
-}
-
-struct MyApp {
-    name: String,
-    age: u32,
-    list: SelectableList<String>,
-}
-
-impl Default for MyApp {
+impl Default for BusinessCardApp {
     fn default() -> Self {
         Self {
-            name: "Arthur".to_owned(),
-            age: 42,
-            list: SelectableList::new(
-                [
-                    "Item 1".to_string(),
-                    "Item 2".to_string(),
-                    "Item 3".to_string(),
-                    "Item 4".to_string(),
-                    "Item 5".to_string(),
-                ]
-                .to_vec(),
-            ),
+            contact: BusinessContact::default(),
+            vcard_text: String::new(),
         }
     }
 }
 
-impl eframe::App for MyApp {
+impl eframe::App for BusinessCardApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("My egui Application");
-            ui.horizontal(|ui| {
-                let name_label = ui.label("Your name: ");
-                ui.text_edit_singleline(&mut self.name)
-                    .labelled_by(name_label.id);
+            ui.heading("Business Card QR Generator");
+            
+            ui.spacing_mut().item_spacing = egui::vec2(0.0, 10.0);
+            
+            // Contact information form
+            ui.group(|ui| {
+                ui.heading("Contact Information");
+                
+                ui.columns(2, |columns| {
+                    // Left column
+                    columns[0].vertical(|ui| {
+                        ui.add_space(5.0);
+                        ui.label("First Name:");
+                        ui.text_edit_singleline(&mut self.contact.first_name);
+                        
+                        ui.add_space(5.0);
+                        ui.label("Last Name:");
+                        ui.text_edit_singleline(&mut self.contact.last_name);
+                        
+                        ui.add_space(5.0);
+                        ui.label("Organization:");
+                        ui.text_edit_singleline(&mut self.contact.organization);
+                        
+                        ui.add_space(5.0);
+                        ui.label("Title:");
+                        ui.text_edit_singleline(&mut self.contact.title);
+                        
+                        ui.add_space(5.0);
+                        ui.label("Email:");
+                        ui.text_edit_singleline(&mut self.contact.email);
+                    });
+                    
+                    // Right column
+                    columns[1].vertical(|ui| {
+                        ui.add_space(5.0);
+                        ui.label("Phone:");
+                        ui.text_edit_singleline(&mut self.contact.phone);
+                        
+                        ui.add_space(5.0);
+                        ui.label("Mobile:");
+                        ui.text_edit_singleline(&mut self.contact.mobile);
+                        
+                        ui.add_space(5.0);
+                        ui.label("Website:");
+                        ui.text_edit_singleline(&mut self.contact.website);
+                        
+                        ui.add_space(5.0);
+                        ui.label("Address:");
+                        ui.text_edit_singleline(&mut self.contact.address);
+                        
+                        ui.add_space(5.0);
+                        ui.label("Note:");
+                        ui.text_edit_singleline(&mut self.contact.note);
+                    });
+                });
+                
+                ui.add_space(10.0);
+                if ui.button("Generate vCard").clicked() {
+                    self.vcard_text = self.contact.generate_vcard();
+                }
             });
-            ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
-            if ui.button("Increment").clicked() {
-                self.age += 1;
-            }
-            ui.label(format!("Hello '{}', age {}", self.name, self.age));
-
-            self.list.show(ctx, ui);
+            
+            ui.add_space(10.0);
+            
+            // Display vCard and future QR code
+            ui.group(|ui| {
+                ui.heading("Generated vCard");
+                
+                ui.columns(2, |columns| {
+                    // vCard text
+                    columns[0].vertical(|ui| {
+                        ui.add_space(5.0);
+                        ui.label("vCard Content:");
+                        ui.add(egui::TextEdit::multiline(&mut self.vcard_text)
+                            .desired_width(f32::INFINITY)
+                            .desired_rows(10)
+                            .lock_focus(true)
+                            .interactive(false));
+                    });
+                    
+                    // Placeholder for QR code image
+                    columns[1].vertical(|ui| {
+                        ui.add_space(5.0);
+                        ui.heading("QR Code");
+                        let qr_rect = egui::Rect::from_min_size(
+                            ui.cursor().min, 
+                            egui::vec2(150.0, 150.0),
+                        );
+                        ui.allocate_rect(qr_rect, egui::Sense::hover());
+                        ui.painter().rect_stroke(
+                            qr_rect, 
+                            0.0, 
+                            egui::Stroke::new(1.0, egui::Color32::GRAY)
+                        );
+                        ui.add_space(150.0);
+                        ui.centered_and_justified(|ui| {
+                            ui.label("QR Code will appear here");
+                        });
+                    });
+                });
+            });
         });
     }
 }

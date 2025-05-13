@@ -2,6 +2,54 @@
 
 This tutorial shows how to build a list widget with keyboard navigation and collapsible items in Egui.
 
+## Business vCard Generator
+
+The application includes functionality to generate vCard QR codes for business contacts. The `BusinessContact` struct and its `generate_vcard` method create a standard vCard string from professional contact information.
+
+```rust
+#[derive(Default)]
+pub struct BusinessContact {
+    pub first_name: String,
+    pub last_name: String,
+    pub organization: String,
+    pub title: String,
+    pub email: String,
+    pub phone: String,
+    pub mobile: String,
+    pub website: String,
+    pub address: String,
+    pub note: String,
+}
+
+impl BusinessContact {
+    pub fn generate_vcard(&self) -> String
+}
+```
+
+### Usage Example
+
+```rust
+// Create a new business contact
+let mut contact = BusinessContact::default();
+contact.first_name = "John".to_string();
+contact.last_name = "Doe".to_string();
+contact.organization = "Acme Corporation".to_string();
+contact.title = "Software Engineer".to_string();
+contact.email = "john.doe@example.com".to_string();
+contact.phone = "+1 (555) 123-4567".to_string();
+contact.mobile = "+1 (555) 987-6543".to_string();
+contact.website = "https://example.com".to_string();
+contact.address = "123 Business St, Suite 101, Cityville, State 12345".to_string();
+contact.note = "Available for consulting Monday-Friday".to_string();
+
+// Generate the vCard string
+let vcard = contact.generate_vcard();
+
+// Use the vCard string with a QR code generator
+```
+
+The generated vCard follows the vCard 3.0 specification and includes all standard business contact fields. Empty fields are omitted from the final vCard.
+
 ## The Core Structure
 
 The list widget needs three pieces of state:
@@ -45,10 +93,27 @@ The widget handles three keyboard actions:
 - Space toggles item expansion
     - Tab is the default to move between widgets, just like PySide6.
 
+/// details | Saturing Sub
+    type: tip
 The `saturating_sub()` method performs subtraction that saturates at zero instead of underflowing. This means:
+
 - If subtracting would result in a negative number, it returns 0 instead
-- For example: `1.saturating_sub(2)` returns 0, not -1
-- This is perfect for list navigation where we can't go below the first item
+    - e.g. `1.saturating_sub(2)` returns 0, not -1
+- This is ideal for list navigation where we can't go below the first item
+
+```python
+# Example of saturing subtraction in Python using max function
+def saturating_sub(a, b):
+    return max(0, a - b)
+
+# Example usage
+result = saturating_sub(1, 2)  # This will return 0 instead of -1
+print(f"saturating_sub(1, 2) = {result}")
+```
+
+
+
+///
 
 Here's the keyboard handling code:
 
