@@ -3,6 +3,7 @@
 
 use eframe::egui;
 use qrcode_generator::QrCodeEcc;
+use std::path::PathBuf;
 
 /// Represents business contact information for vCard generation
 #[derive(Default)]
@@ -90,6 +91,9 @@ struct BusinessCardApp {
     show_copied_toast: bool,
     toast_time: f32,
     qr_code_texture: Option<egui::TextureHandle>,
+    show_saved_toast: bool,
+    saved_toast_time: f32,
+    save_path: String,
 }
 
 impl Default for BusinessCardApp {
@@ -100,6 +104,9 @@ impl Default for BusinessCardApp {
             show_copied_toast: false,
             toast_time: 0.0,
             qr_code_texture: None,
+            show_saved_toast: false,
+            saved_toast_time: 0.0,
+            save_path: String::from("qrcode.png"),
         }
     }
 }
@@ -131,6 +138,24 @@ impl BusinessCardApp {
 
         egui::ColorImage::from_rgba_unmultiplied([width, height], &rgba_data)
     }
+
+    // Save QR code as a PNG file
+    fn save_qr_code_to_png(&self, path: &str) -> Result<(), String> {
+        if self.vcard_text.is_empty() {
+            return Err("No vCard generated yet".to_string());
+        }
+
+        // Generate QR code directly using qrcode-generator
+        let qr_code =
+            qrcode_generator::to_image_buffer(&self.vcard_text, QrCodeEcc::Medium, 512).unwrap();
+
+        // Save image to file
+        let file_path = PathBuf::from(path);
+        match qr_code.save(file_path) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Failed to save QR code: {}", e)),
+        }
+    }
 }
 
 impl eframe::App for BusinessCardApp {
@@ -159,13 +184,40 @@ impl eframe::App for BusinessCardApp {
             self.toast_time = 0.0;
         }
 
-        // Update toast timer
+        // Ctrl+S to save/download QR code as PNG
+        if ctx.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::S))
+            && self.qr_code_texture.is_some()
+            && !self.vcard_text.is_empty()
+        {
+            println!("Saving QR code to file: {}", self.save_path);
+            match self.save_qr_code_to_png(&self.save_path) {
+                Ok(_) => {
+                    self.show_saved_toast = true;
+                    self.saved_toast_time = 0.0;
+                    println!("QR code saved successfully to {}", self.save_path);
+                }
+                Err(e) => {
+                    eprintln!("Error saving QR code: {}", e);
+                }
+            }
+        }
+
+        // Update toast timers
         if self.show_copied_toast {
             let delta = ctx.input(|i| i.stable_dt);
             self.toast_time += delta;
             if self.toast_time > 2.0 {
                 // Show toast for 2 seconds
                 self.show_copied_toast = false;
+            }
+        }
+
+        if self.show_saved_toast {
+            let delta = ctx.input(|i| i.stable_dt);
+            self.saved_toast_time += delta;
+            if self.saved_toast_time > 2.0 {
+                // Show toast for 2 seconds
+                self.show_saved_toast = false;
             }
         }
 
@@ -287,6 +339,47 @@ impl eframe::App for BusinessCardApp {
                             ui.centered_and_justified(|ui| {
                                 ui.add(image);
                             });
+
+                            // Add a button to save QR code
+                            ui.add_space(10.0);
+                            ui.vertical_centered(|ui| {
+                                ui.label("Save QR Code:");
+                                ui.horizontal(|ui| {
+                                    ui.label("Filename:");
+                                    ui.add_sized(
+                                        egui::vec2(200.0, 24.0),
+                                        egui::TextEdit::singleline(&mut self.save_path),
+                                    );
+
+                                    // Make the download button more noticeable
+                                    let download_button =
+                                        egui::Button::new("📥 Download PNG (Ctrl+S)")
+                                            .min_size(egui::vec2(180.0, 28.0))
+                                            .fill(egui::Color32::from_rgb(100, 200, 100));
+
+                                    // Add the button with tooltip
+                                    let response = ui.add(download_button).on_hover_text(
+                                        "Download the QR code as a PNG file\nHotkey: Ctrl+S",
+                                    );
+
+                                    if response.clicked() {
+                                        println!("Saving QR code to file: {}", self.save_path);
+                                        match self.save_qr_code_to_png(&self.save_path) {
+                                            Ok(_) => {
+                                                self.show_saved_toast = true;
+                                                self.saved_toast_time = 0.0;
+                                                println!(
+                                                    "QR code saved successfully to {}",
+                                                    self.save_path
+                                                );
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Error saving QR code: {}", e);
+                                            }
+                                        }
+                                    }
+                                });
+                            });
                         } else {
                             // Draw placeholder
                             let qr_rect = egui::Rect::from_min_size(
@@ -308,7 +401,8 @@ impl eframe::App for BusinessCardApp {
                 });
             });
 
-            // Display toast notification when clipboard is copied
+            // Display toast notifications
+            // Toast for clipboard copy
             if self.show_copied_toast {
                 let screen_rect = ctx.screen_rect();
                 let toast_rect = egui::Rect::from_center_size(
@@ -331,6 +425,34 @@ impl eframe::App for BusinessCardApp {
                     toast_rect.center(),
                     egui::Align2::CENTER_CENTER,
                     "vCard copied to clipboard!",
+                    egui::FontId::proportional(14.0),
+                    egui::Color32::WHITE,
+                );
+            }
+
+            // Toast for QR code saved
+            if self.show_saved_toast {
+                let screen_rect = ctx.screen_rect();
+                let toast_rect = egui::Rect::from_center_size(
+                    egui::pos2(screen_rect.center().x, screen_rect.max.y - 40.0),
+                    egui::vec2(200.0, 30.0),
+                );
+
+                let painter = ctx.layer_painter(egui::LayerId::new(
+                    egui::Order::Foreground,
+                    egui::Id::new("saved_toast"),
+                ));
+
+                painter.rect_filled(
+                    toast_rect,
+                    5.0,
+                    egui::Color32::from_rgba_premultiplied(20, 20, 20, 200),
+                );
+
+                painter.text(
+                    toast_rect.center(),
+                    egui::Align2::CENTER_CENTER,
+                    format!("📥 QR code downloaded as {}", self.save_path),
                     egui::FontId::proportional(14.0),
                     egui::Color32::WHITE,
                 );
