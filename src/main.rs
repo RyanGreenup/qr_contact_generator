@@ -231,7 +231,7 @@ impl eframe::App for BusinessCardApp {
                         let download_button = egui::Button::new("📥 Download QR Code (Ctrl+S)")
                             .min_size(egui::vec2(200.0, 30.0))
                             .fill(egui::Color32::from_rgb(50, 180, 50));
-                            
+
                         if ui.add(download_button).clicked() {
                             match self.save_qr_code_to_png(&self.save_path) {
                                 Ok(_) => {
@@ -351,10 +351,10 @@ impl eframe::App for BusinessCardApp {
                     columns[1].vertical(|ui| {
                         ui.add_space(5.0);
                         ui.heading("QR Code");
-                        
+
                         // QR code display area
                         let has_qr_code = self.qr_code_texture.is_some();
-                        
+
                         if let Some(texture) = &self.qr_code_texture {
                             // Display the QR code image
                             let size = 200.0;
@@ -382,10 +382,10 @@ impl eframe::App for BusinessCardApp {
                                 ui.label("QR Code will appear here");
                             });
                         }
-                        
+
                         // Always show the save controls section
                         ui.add_space(20.0);
-                        
+
                         // First add a file name field
                         ui.horizontal(|ui| {
                             ui.label("Save filename:");
@@ -394,9 +394,9 @@ impl eframe::App for BusinessCardApp {
                                 egui::TextEdit::singleline(&mut self.save_path),
                             );
                         });
-                        
+
                         ui.add_space(5.0);
-                        
+
                         // Add a very prominent, large download button
                         ui.vertical_centered(|ui| {
                             // Create large, centered download button
@@ -405,7 +405,7 @@ impl eframe::App for BusinessCardApp {
                             } else {
                                 "Generate vCard to enable download"
                             };
-                            
+
                             let download_button = egui::Button::new(
                                 egui::RichText::new(button_text)
                                     .size(18.0)
@@ -427,7 +427,7 @@ impl eframe::App for BusinessCardApp {
                             } else {
                                 "You need to generate a vCard first by filling the contact form"
                             };
-                            
+
                             let response = ui.add_enabled(has_qr_code, download_button)
                                 .on_hover_text(tooltip);
 
