@@ -2,6 +2,7 @@
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
 use eframe::egui;
+use qrcode_generator::QrCodeEcc;
 
 /// Represents business contact information for vCard generation
 #[derive(Default)]
@@ -88,6 +89,7 @@ struct BusinessCardApp {
     vcard_text: String,
     show_copied_toast: bool,
     toast_time: f32,
+    qr_code_texture: Option<egui::TextureHandle>,
 }
 
 impl Default for BusinessCardApp {
@@ -97,7 +99,37 @@ impl Default for BusinessCardApp {
             vcard_text: String::new(),
             show_copied_toast: false,
             toast_time: 0.0,
+            qr_code_texture: None,
         }
+    }
+}
+
+impl BusinessCardApp {
+    // Generate QR code image from a string and convert to ColorImage for egui
+    fn generate_qr_code(&self, text: &str) -> egui::ColorImage {
+        // Generate QR code with medium error correction
+        let qr_code = qrcode_generator::to_image_buffer(text, QrCodeEcc::Medium, 512).unwrap();
+
+        // Get dimensions
+        let width = qr_code.width() as usize;
+        let height = qr_code.height() as usize;
+
+        // Convert from grayscale to RGBA
+        let mut rgba_data = Vec::with_capacity(width * height * 4);
+
+        for pixel in qr_code.pixels() {
+            // QR codes are black (0) and white (255)
+            let value = pixel[0];
+
+            // Black pixels (value = 0) become black (0, 0, 0, 255)
+            // White pixels (value = 255) become white (255, 255, 255, 255)
+            rgba_data.push(value); // R
+            rgba_data.push(value); // G
+            rgba_data.push(value); // B
+            rgba_data.push(255); // A (always fully opaque)
+        }
+
+        egui::ColorImage::from_rgba_unmultiplied([width, height], &rgba_data)
     }
 }
 
@@ -107,6 +139,15 @@ impl eframe::App for BusinessCardApp {
         if ctx.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::G)) {
             // Ctrl+G to generate vCard
             self.vcard_text = self.contact.generate_vcard();
+
+            // Generate QR code when vCard is generated
+            if !self.vcard_text.is_empty() {
+                let color_image = self.generate_qr_code(&self.vcard_text);
+
+                // Load or update texture
+                self.qr_code_texture =
+                    Some(ctx.load_texture("qr-code", color_image, Default::default()));
+            }
         }
 
         if ctx.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::C))
@@ -189,6 +230,15 @@ impl eframe::App for BusinessCardApp {
                 ui.horizontal(|ui| {
                     if ui.button("Generate vCard (Ctrl+G)").clicked() {
                         self.vcard_text = self.contact.generate_vcard();
+
+                        // Generate QR code when vCard is generated
+                        if !self.vcard_text.is_empty() {
+                            let color_image = self.generate_qr_code(&self.vcard_text);
+
+                            // Load or update texture
+                            self.qr_code_texture =
+                                Some(ctx.load_texture("qr-code", color_image, Default::default()));
+                        }
                     }
                 });
             });
@@ -222,22 +272,38 @@ impl eframe::App for BusinessCardApp {
                         );
                     });
 
-                    // Placeholder for QR code image
+                    // QR code image
                     columns[1].vertical(|ui| {
                         ui.add_space(5.0);
                         ui.heading("QR Code");
-                        let qr_rect =
-                            egui::Rect::from_min_size(ui.cursor().min, egui::vec2(150.0, 150.0));
-                        ui.allocate_rect(qr_rect, egui::Sense::hover());
-                        ui.painter().rect_stroke(
-                            qr_rect,
-                            0.0,
-                            egui::Stroke::new(1.0, egui::Color32::GRAY),
-                        );
-                        ui.add_space(150.0);
-                        ui.centered_and_justified(|ui| {
-                            ui.label("QR Code will appear here");
-                        });
+
+                        if let Some(texture) = &self.qr_code_texture {
+                            // Display the QR code image
+                            let size = 200.0;
+                            let image = egui::Image::new(texture)
+                                .fit_to_exact_size(egui::vec2(size, size))
+                                .bg_fill(egui::Color32::WHITE);
+
+                            ui.centered_and_justified(|ui| {
+                                ui.add(image);
+                            });
+                        } else {
+                            // Draw placeholder
+                            let qr_rect = egui::Rect::from_min_size(
+                                ui.cursor().min,
+                                egui::vec2(150.0, 150.0),
+                            );
+                            ui.allocate_rect(qr_rect, egui::Sense::hover());
+                            ui.painter().rect_stroke(
+                                qr_rect,
+                                0.0,
+                                egui::Stroke::new(1.0, egui::Color32::GRAY),
+                            );
+                            ui.add_space(150.0);
+                            ui.centered_and_justified(|ui| {
+                                ui.label("QR Code will appear here");
+                            });
+                        }
                     });
                 });
             });
