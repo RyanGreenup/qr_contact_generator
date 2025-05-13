@@ -224,6 +224,29 @@ impl eframe::App for BusinessCardApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Business Card QR Generator");
 
+            // Add prominent download button at the top if QR code exists
+            if self.qr_code_texture.is_some() {
+                ui.horizontal(|ui| {
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let download_button = egui::Button::new("📥 Download QR Code (Ctrl+S)")
+                            .min_size(egui::vec2(200.0, 30.0))
+                            .fill(egui::Color32::from_rgb(50, 180, 50));
+                            
+                        if ui.add(download_button).clicked() {
+                            match self.save_qr_code_to_png(&self.save_path) {
+                                Ok(_) => {
+                                    self.show_saved_toast = true;
+                                    self.saved_toast_time = 0.0;
+                                },
+                                Err(e) => {
+                                    eprintln!("Error saving QR code: {}", e);
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
             ui.spacing_mut().item_spacing = egui::vec2(0.0, 10.0);
 
             // Contact information form
@@ -328,7 +351,10 @@ impl eframe::App for BusinessCardApp {
                     columns[1].vertical(|ui| {
                         ui.add_space(5.0);
                         ui.heading("QR Code");
-
+                        
+                        // QR code display area
+                        let has_qr_code = self.qr_code_texture.is_some();
+                        
                         if let Some(texture) = &self.qr_code_texture {
                             // Display the QR code image
                             let size = 200.0;
@@ -338,47 +364,6 @@ impl eframe::App for BusinessCardApp {
 
                             ui.centered_and_justified(|ui| {
                                 ui.add(image);
-                            });
-
-                            // Add a button to save QR code
-                            ui.add_space(10.0);
-                            ui.vertical_centered(|ui| {
-                                ui.label("Save QR Code:");
-                                ui.horizontal(|ui| {
-                                    ui.label("Filename:");
-                                    ui.add_sized(
-                                        egui::vec2(200.0, 24.0),
-                                        egui::TextEdit::singleline(&mut self.save_path),
-                                    );
-
-                                    // Make the download button more noticeable
-                                    let download_button =
-                                        egui::Button::new("📥 Download PNG (Ctrl+S)")
-                                            .min_size(egui::vec2(180.0, 28.0))
-                                            .fill(egui::Color32::from_rgb(100, 200, 100));
-
-                                    // Add the button with tooltip
-                                    let response = ui.add(download_button).on_hover_text(
-                                        "Download the QR code as a PNG file\nHotkey: Ctrl+S",
-                                    );
-
-                                    if response.clicked() {
-                                        println!("Saving QR code to file: {}", self.save_path);
-                                        match self.save_qr_code_to_png(&self.save_path) {
-                                            Ok(_) => {
-                                                self.show_saved_toast = true;
-                                                self.saved_toast_time = 0.0;
-                                                println!(
-                                                    "QR code saved successfully to {}",
-                                                    self.save_path
-                                                );
-                                            }
-                                            Err(e) => {
-                                                eprintln!("Error saving QR code: {}", e);
-                                            }
-                                        }
-                                    }
-                                });
                             });
                         } else {
                             // Draw placeholder
@@ -397,6 +382,69 @@ impl eframe::App for BusinessCardApp {
                                 ui.label("QR Code will appear here");
                             });
                         }
+                        
+                        // Always show the save controls section
+                        ui.add_space(20.0);
+                        
+                        // First add a file name field
+                        ui.horizontal(|ui| {
+                            ui.label("Save filename:");
+                            ui.add_sized(
+                                egui::vec2(250.0, 24.0),
+                                egui::TextEdit::singleline(&mut self.save_path),
+                            );
+                        });
+                        
+                        ui.add_space(5.0);
+                        
+                        // Add a very prominent, large download button
+                        ui.vertical_centered(|ui| {
+                            // Create large, centered download button
+                            let button_text = if has_qr_code {
+                                "📥 DOWNLOAD QR CODE (Ctrl+S) 📥"
+                            } else {
+                                "Generate vCard to enable download"
+                            };
+                            
+                            let download_button = egui::Button::new(
+                                egui::RichText::new(button_text)
+                                    .size(18.0)
+                                    .strong()
+                            )
+                            .min_size(egui::vec2(300.0, 40.0))
+                            .fill(if has_qr_code {
+                                // Bright green for enabled button
+                                egui::Color32::from_rgb(40, 180, 70)
+                            } else {
+                                // Gray for disabled button
+                                egui::Color32::from_rgb(130, 130, 130)
+                            })
+                            .stroke(egui::Stroke::new(1.0, egui::Color32::WHITE));
+
+                            // Add the button with tooltip
+                            let tooltip = if has_qr_code {
+                                "Click to download the QR code as a PNG file\nYou can also press Ctrl+S"
+                            } else {
+                                "You need to generate a vCard first by filling the contact form"
+                            };
+                            
+                            let response = ui.add_enabled(has_qr_code, download_button)
+                                .on_hover_text(tooltip);
+
+                            if response.clicked() && has_qr_code {
+                                println!("Saving QR code to file: {}", self.save_path);
+                                match self.save_qr_code_to_png(&self.save_path) {
+                                    Ok(_) => {
+                                        self.show_saved_toast = true;
+                                        self.saved_toast_time = 0.0;
+                                        println!("QR code saved successfully to {}", self.save_path);
+                                    }
+                                    Err(e) => {
+                                        eprintln!("Error saving QR code: {}", e);
+                                    }
+                                }
+                            }
+                        });
                     });
                 });
             });
