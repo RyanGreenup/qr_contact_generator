@@ -3,6 +3,68 @@
 
 use eframe::egui;
 
+/// Represents business contact information for vCard generation
+#[derive(Default)]
+pub struct BusinessContact {
+    pub first_name: String,
+    pub last_name: String,
+    pub organization: String,
+    pub title: String,
+    pub email: String,
+    pub phone: String,
+    pub mobile: String,
+    pub website: String,
+    pub address: String,
+    pub note: String,
+}
+
+impl BusinessContact {
+    /// Generates a vCard string from the business contact information
+    pub fn generate_vcard(&self) -> String {
+        let mut vcard = String::new();
+
+        vcard.push_str("BEGIN:VCARD\n");
+        vcard.push_str("VERSION:3.0\n");
+        vcard.push_str(&format!("N:{};{};;;\n", self.last_name, self.first_name));
+        vcard.push_str(&format!("FN:{} {}\n", self.first_name, self.last_name));
+
+        if !self.organization.is_empty() {
+            vcard.push_str(&format!("ORG:{}\n", self.organization));
+        }
+
+        if !self.title.is_empty() {
+            vcard.push_str(&format!("TITLE:{}\n", self.title));
+        }
+
+        if !self.email.is_empty() {
+            vcard.push_str(&format!("EMAIL;type=WORK,INTERNET:{}\n", self.email));
+        }
+
+        if !self.phone.is_empty() {
+            vcard.push_str(&format!("TEL;type=WORK,voice:{}\n", self.phone));
+        }
+
+        if !self.mobile.is_empty() {
+            vcard.push_str(&format!("TEL;type=CELL,voice:{}\n", self.mobile));
+        }
+
+        if !self.website.is_empty() {
+            vcard.push_str(&format!("URL:{}\n", self.website));
+        }
+
+        if !self.address.is_empty() {
+            vcard.push_str(&format!("ADR;type=WORK:;;{};;;;\n", self.address));
+        }
+
+        if !self.note.is_empty() {
+            vcard.push_str(&format!("NOTE:{}\n", self.note));
+        }
+
+        vcard.push_str("END:VCARD");
+        vcard
+    }
+}
+
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
@@ -79,13 +141,16 @@ impl Default for MyApp {
         Self {
             name: "Arthur".to_owned(),
             age: 42,
-            list: SelectableList::new([
-                "Item 1".to_string(),
-                "Item 2".to_string(),
-                "Item 3".to_string(),
-                "Item 4".to_string(),
-                "Item 5".to_string(),
-            ].to_vec()),
+            list: SelectableList::new(
+                [
+                    "Item 1".to_string(),
+                    "Item 2".to_string(),
+                    "Item 3".to_string(),
+                    "Item 4".to_string(),
+                    "Item 5".to_string(),
+                ]
+                .to_vec(),
+            ),
         }
     }
 }
@@ -106,10 +171,6 @@ impl eframe::App for MyApp {
             ui.label(format!("Hello '{}', age {}", self.name, self.age));
 
             self.list.show(ctx, ui);
-
-            // ui.image(egui::include_image!(
-            //     "../../../crates/egui/assets/ferris.png"
-            // ));
         });
     }
 }
